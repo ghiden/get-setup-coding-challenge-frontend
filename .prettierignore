@@ -1,0 +1,6 @@
+.history
+.eslintrc
+.vscode
+*.js
+*.json
+*.md
