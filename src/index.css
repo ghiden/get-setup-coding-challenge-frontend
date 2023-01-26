@@ -9,3 +9,12 @@
 .day-element {
 	cursor: pointer;
 }
+
+.availability {
+	background-color: white;
+	transition: background-color 1000ms linear;
+}
+
+.availability.added {
+  background-color: yellow;
+}
