@@ -5,3 +5,7 @@
 .weekly-calendar {
 	width: 800px;
 }
+
+.day-element {
+	cursor: pointer;
+}

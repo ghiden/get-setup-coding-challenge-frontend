@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { addDays, getWeek, getYear, startOfWeek, format } from 'date-fns';
 
 interface Availability {
@@ -32,7 +32,10 @@ function calculateYear(today: Date) {
 
 function WeeklyCalandar() {
   const [today, setToday] = useState(new Date());
-  const [availabilities, setAvailabilities] = useState([]);
+  const [availabilities, setAvailabilities] = useState<Availability[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date>();
+  const startAt = useRef<HTMLInputElement>(null);
+  const endAt = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch(`${serverUrl}/api/v1/availabilities?guideId=${guideId}`)
@@ -42,12 +45,46 @@ function WeeklyCalandar() {
 
   const moveToPreviousWeek = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
+    setSelectedDate(undefined);
     setToday(addDays(today, -7));
   };
 
   const moveToNextWeek = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
+    setSelectedDate(undefined);
     setToday(addDays(today, 7));
+  };
+
+  const addAvailability = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!(selectedDate && startAt.current?.value && endAt.current?.value)) {
+      return;
+    }
+
+    const year = selectedDate.getFullYear();
+    const month = selectedDate.getMonth();
+    const date = selectedDate.getDate();
+    const [startHour, startMinute] = startAt.current.value.split(':');
+    const [endHour, endMinute] = endAt.current.value.split(':');
+    const startAtDate = new Date(year, month, date, +startHour, +startMinute);
+    const endAtDate = new Date(year, month, date, +endHour, +endMinute);
+
+    const params = {
+      guideId,
+      availability: {
+        startAt: startAtDate.toISOString(),
+        endAt: endAtDate.toISOString(),
+      },
+    };
+    fetch(`${serverUrl}/api/v1/availabilities`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(params),
+    })
+      .then((response) => response.json())
+      .then((newAvailability: Availability) => setAvailabilities([...availabilities, newAvailability]));
   };
 
   return (
@@ -63,11 +100,24 @@ function WeeklyCalandar() {
 
       <ul className="flex flex-row justify-between">
         {calculateDays(today).map((day) => (
-          <li key={+day}>
+          <li className="day-element" key={+day} onClick={() => setSelectedDate(day)}>
             {format(day, 'eee')} {day.getDate()}
           </li>
         ))}
       </ul>
+
+      {selectedDate ? (
+        <div className="mt-5">
+          <h3 className="font-bold">Add Availability</h3>
+          <p>{format(selectedDate, 'eeee d')}</p>
+          <form onSubmit={addAvailability} className="availability-form">
+            Start: <input type="time" ref={startAt} />
+            End: <input type="time" ref={endAt} />
+            <br />
+            <button type="submit">Add</button>
+          </form>
+        </div>
+      ) : null}
 
       <h3 className="mt-5 font-bold">Availabilities</h3>
       <ul>
